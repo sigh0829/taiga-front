@@ -64,29 +64,175 @@ describe('wiki', function() {
         await utils.common.takeScreenshot("wiki", "deleting-the-created-link");
     });
 
-    it('edition', async function() {
-        let timesEdited = wikiHelper.editor().getTimesEdited();
-        let lastEditionDatetime = wikiHelper.editor().getLastEditionDateTime();
-        wikiHelper.editor().enabledEditionMode();
-        let settingText = "This is the new text" + new Date().getTime();
-        wikiHelper.editor().setText(settingText);
+    it.only('edition', async function() {
+        var editor = $('.medium');
 
-        //preview
-        wikiHelper.editor().preview();
-        await utils.common.takeScreenshot("wiki", "home-edition-preview");
-        wikiHelper.editor().closePreview();
+        editor.click();
 
-        //save
-        wikiHelper.editor().save();
-        let newHtml = await wikiHelper.editor().getInnerHtml();
-        let newTimesEdited = wikiHelper.editor().getTimesEdited();
-        let newLastEditionDatetime = wikiHelper.editor().getLastEditionDateTime();
+        //clean
+        browser.executeScript(function () {
+            var range = document.createRange();
+            var medium = document.body.querySelector('.medium');
 
-        expect(newHtml).to.be.equal("<p>" + settingText + "</p>");
-        expect(newTimesEdited).to.be.eventually.equal(timesEdited+1);
-        expect(newLastEditionDatetime).to.be.not.equal(lastEditionDatetime);
+            range.setStart(medium.firstChild, 0);
+            range.setEnd(medium.lastChild, 0);
 
-        await utils.common.takeScreenshot("wiki", "home-edition");
+            var sel = window.getSelection();
+
+            sel.removeAllRanges();
+            sel.addRange(range);
+
+            return sel;
+        });
+
+        editor.sendKeys(protractor.Key.BACK_SPACE);
+        editor.sendKeys(protractor.Key.BACK_SPACE);
+
+        editor.sendKeys("test");
+
+        // normal behavior
+        //select
+        browser.executeScript(function () {
+            // select the first paragraph
+            var range = document.createRange();
+            range.selectNode(document.body.querySelector('.medium').firstChild);
+
+            var sel = window.getSelection();
+            sel.removeAllRanges();
+            sel.addRange(range);
+        });
+
+        browser.actions().mouseUp().perform(); // trigger medium events
+        $('.medium-editor-action-bold').click();
+
+        editor.click();
+
+        // the previous content must be text
+        let html = await editor.$('p').getInnerHtml();
+
+        expect(html).to.be.eql('<b>test</b>');
+
+        // convertir a markdown
+        $('.e2e-markdown-mode').click();
+
+        var markdownTextarea = $('.e2e-markdown-textarea');
+
+        let markdown = await markdownTextarea.getAttribute("value");
+
+        expect(markdown).to.be.equal('**test**');
+
+        // de markdown a html
+        markdownTextarea.sendKeys(' _test2_');
+
+        $('.e2e-html-mode').click();
+
+        html = await editor.$('p').getInnerHtml();
+        expect(html).to.be.eql('<strong>test</strong> <em>test2</em>');
+
+        //code block
+        //clean
+        browser.executeScript(function () {
+            var range = document.createRange();
+            var medium = document.body.querySelector('.medium');
+
+            range.setStart(medium.firstChild, 0);
+            range.setEnd(medium.lastChild, 0);
+
+            var sel = window.getSelection();
+
+            sel.removeAllRanges();
+            sel.addRange(range);
+
+            return sel;
+        });
+
+        editor.sendKeys(protractor.Key.BACK_SPACE);
+        editor.sendKeys("var test = 2;");
+
+        //select
+        browser.executeScript(function () {
+            // select the first paragraph
+            var range = document.createRange();
+            range.selectNode(document.body.querySelector('.medium').firstChild);
+
+            var sel = window.getSelection();
+            sel.removeAllRanges();
+            sel.addRange(range);
+        });
+
+        browser.actions().mouseUp().perform(); // trigger medium events
+
+        $('.medium-editor-button-last').click();
+        $('.code-language-selector').click();
+        $('.code-language-search input').sendKeys('javascript');
+        $('.code-language-search li').click();
+        $('.e2e-save-editor').click();
+
+        let hasHightlighter = !!await editor.$$('.token').count();
+
+        expect(hasHightlighter).to.be.true;
+
+        //clean
+        browser.executeScript(function () {
+            var range = document.createRange();
+            var medium = document.body.querySelector('.medium');
+
+            range.setStart(medium.firstChild, 0);
+            range.setEnd(medium.lastChild, 0);
+
+            var sel = window.getSelection();
+
+            sel.removeAllRanges();
+            sel.addRange(range);
+
+            return sel;
+        });
+
+        editor.sendKeys(protractor.Key.BACK_SPACE);
+        editor.sendKeys(protractor.Key.BACK_SPACE);
+
+        // confirmar modificación al salir
+        editor.sendKeys('text text text');
+        editor.sendKeys(protractor.Key.ESCAPE);
+
+        await browser.sleep(5000);
+
+        // confirmar modificación al salir
+
+        // recargar y conservar los cambios
+
+        // menciones
+
+        // emojis
+
+        //guardar
+
+        //cancelar
+
+        await browser.sleep(6000);
+
+        // let timesEdited = wikiHelper.editor().getTimesEdited();
+        // let lastEditionDatetime = wikiHelper.editor().getLastEditionDateTime();
+        // wikiHelper.editor().enabledEditionMode();
+        // let settingText = "This is the new text" + new Date().getTime();
+        // wikiHelper.editor().setText(settingText);
+        //
+        // //preview
+        // wikiHelper.editor().preview();
+        // await utils.common.takeScreenshot("wiki", "home-edition-preview");
+        // wikiHelper.editor().closePreview();
+        //
+        // //save
+        // wikiHelper.editor().save();
+        // let newHtml = await wikiHelper.editor().getInnerHtml();
+        // let newTimesEdited = wikiHelper.editor().getTimesEdited();
+        // let newLastEditionDatetime = wikiHelper.editor().getLastEditionDateTime();
+        //
+        // expect(newHtml).to.be.equal("<p>" + settingText + "</p>");
+        // expect(newTimesEdited).to.be.eventually.equal(timesEdited+1);
+        // expect(newLastEditionDatetime).to.be.not.equal(lastEditionDatetime);
+        //
+        // await utils.common.takeScreenshot("wiki", "home-edition");
     });
 
     it('confirm close with ESC in lightbox', async function() {
